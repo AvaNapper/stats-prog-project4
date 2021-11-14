@@ -24,9 +24,8 @@ finite_diff <- function(theta, f) {
   f_dtheta
 }
 
-get_gradient <- function(f, theta, ...) {
+get_gradient <- function(f_theta) {
   # Purpose: Get the gradient of function f at point theta.
-  f_theta <- f(theta, ...)
   
   # Do we need to calculate the gradient?
   f_grad <- attr(f_theta, "gradient")
@@ -37,6 +36,15 @@ get_gradient <- function(f, theta, ...) {
   }
   
   f_dtheta
+}
+
+has_converged <- function(f_val, f_grad, fscale, tol) {
+  val <- max(abs(f_grad)) < (abs(f_val)+fscale)*tol
+  if (is.na(val)) {
+    FALSE
+  } else {
+    val
+  }
 }
 
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
@@ -64,10 +72,13 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
   # Initial B matrix
   B0 <- diag(length(theta0))
   B <- B0
+  iter <- 0
 
-  for (j in 1:maxit) {
-
-    grad_theta0 <- get_gradient(f, theta0, ...)
+  while (iter < maxit) {
+    iter <- iter + 1
+    
+    f_theta0 <- f(theta0, ...)
+    grad_theta0 <- get_gradient(f_theta0)
 
     # Quasi Newton step from theta0 to theta1 
     delta <- drop(-B %*% grad_theta0)
@@ -76,8 +87,9 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     theta1 <- theta0 + delta
     print('new theta val')
     print(theta1)
-
-    grad_theta1 <- get_gradient(f, theta1, ...)
+    
+    f_theta1 <- f(theta1, ...)
+    grad_theta1 <- get_gradient(f_theta1)
     print('grad vec of f at new theta')
     print(grad_theta1)
 
@@ -90,30 +102,35 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     
     # rho_inv_k is a scalar
     rho_k <- 1/ rho_inv_k
-    print('intial rho')
+    print('rho')
     print(rho_k)
 
     # Calculate next B matrix
     expression1 <- (diag(length(theta)) - rho_k*(step_k %*% t(y_k)))
     expression2 <- (diag(length(theta)) - rho_k*(y_k %*% step_k_t))
-    expression3 <- rho_k * sk %*% step_k_t
+    expression3 <- rho_k * step_k %*% step_k_t
     # Is there some optimization to be done here by first calculating the rightmost matrix multiplication?
     B <- expression1 %*% B %*% expression2 + expression3
     print('new B')
     print(B)
-
+    
+    if(has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
+      break
+    }
     theta0 <- theta1
   }
 
-  #outputs <- list(f(theta1), theta1, iter, g, H)
-  print('Final theta')
-  print(theta1)
-  #return(outputs)
-  
+  bfgs_res = list(
+    f=f(theta0),
+    theta=theta0,
+    iter=iter,
+    g=grad_theta0
+  )
+  bfgs_res
 }
 
 # Test function Simon provided (Used to check the Quasi method)
-rb <- function(theta,getg=FALSE,k=100) {
+rb <- function(theta,getg=FALSE,k=10) {
   ## Rosenbrock objective function, suitable for use by ’bfgs’
   z <- theta[1]; x <- theta[2]
   f <- k*(z-x^2)^2 + (1-x)^2 + 1
@@ -128,4 +145,5 @@ test_binomial <- function(theta) {
   2* theta[1]^3 - 7*theta[2]^2
 }
 
-bfgs(c(0,1), rb, getg=TRUE, maxit = 40)
+mtrace(has_converged)
+bfgs(c(-1,2), rb, getg=TRUE, maxit = 40)
