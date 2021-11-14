@@ -24,6 +24,21 @@ finite_diff <- function(theta, f) {
   f_dtheta
 }
 
+get_gradient <- function(f, theta, ...) {
+  # Purpose: Get the gradient of function f at point theta.
+  f_theta <- f(theta, ...)
+  
+  # Do we need to calculate the gradient?
+  f_grad <- attr(f_theta, "gradient")
+  if(is.null(f_grad)) {
+    f_dtheta <- finite_diff(theta, f)
+  } else {
+    f_dtheta <- f_grad
+  }
+  
+  f_dtheta
+}
+
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Purpose:
     # Input:  theta - vector of intial values for optimization parameters
@@ -50,61 +65,45 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
   B0 <- diag(length(theta0))
   B <- B0
 
-  for (j in 1:maxit){
+  for (j in 1:maxit) {
 
-    f_theta <- f(theta0, ...)
-    
-    # Do we need to calculate the gradient?
-    f_grad <- attr(f_theta, "gradient")
-    if(is.null(f_grad)) {
-      f_dtheta0 <- finite_diff(theta0, f)
-    } else {
-      f_dtheta0 <- f_grad
-    }
+    grad_theta0 <- get_gradient(f, theta0, ...)
 
     # Quasi Newton step from theta0 to theta1 
-    delta <- drop(-B %*% f_dtheta0)
-
+    delta <- drop(-B %*% grad_theta0)
 
     # New theta value 
     theta1 <- theta0 + delta
     print('new theta val')
     print(theta1)
 
-
-    # Calculating gradient vector for f at new value of theta
-    f_dtheta1 <- th0 <- theta1
-    for (i in 1:length(th0)) { ## loop over parameters
-      th1 <- th0; th1[i] <- th1[i] + eps ## increase th0[i] by eps
-      f_dtheta1[i] <- (f(th1) - f(th0))/eps ## approximate -dl/dth[i]
-    }
+    grad_theta1 <- get_gradient(f, theta1, ...)
     print('grad vec of f at new theta')
-    print(f_dtheta1)
+    print(grad_theta1)
 
-    # Initial s and y vectors
-    sk <- theta1 - theta0
-    yk <- f_dtheta1 - f_dtheta0
+    # Initial s and y vectors. Can this just be delta?
+    step_k <- theta1 - theta0
+    step_k_t <- t(step_k)
+    y_k <- grad_theta1 - grad_theta0
 
-  
-    # Initial rho vector
-    rho_inv_k <- drop(t(sk) %*% yk)
+    rho_inv_k <- drop(step_k_t %*% y_k)
+    
+    # rho_inv_k is a scalar
     rho_k <- 1/ rho_inv_k
     print('intial rho')
     print(rho_k)
 
-
-    # To calc next B matrix
-    expression1 <- (diag(length(theta)) - rho_k*(sk %*% t(yk)))
-    expression2 <- (diag(length(theta)) - rho_k*(yk %*% t(sk)))
-    expression3 <- rho_k * sk %*% t(sk)
+    # Calculate next B matrix
+    expression1 <- (diag(length(theta)) - rho_k*(step_k %*% t(y_k)))
+    expression2 <- (diag(length(theta)) - rho_k*(y_k %*% step_k_t))
+    expression3 <- rho_k * sk %*% step_k_t
+    # Is there some optimization to be done here by first calculating the rightmost matrix multiplication?
     B <- expression1 %*% B %*% expression2 + expression3
     print('new B')
     print(B)
 
     theta0 <- theta1
   }
-
-
 
   #outputs <- list(f(theta1), theta1, iter, g, H)
   print('Final theta')
@@ -129,5 +128,4 @@ test_binomial <- function(theta) {
   2* theta[1]^3 - 7*theta[2]^2
 }
 
-mtrace(bfgs)
 bfgs(c(0,1), rb, getg=TRUE, maxit = 40)
