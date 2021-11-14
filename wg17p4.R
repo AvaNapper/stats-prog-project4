@@ -1,4 +1,30 @@
-bfgs <- function(theta,f,...,tol=1e-5,fscale=1,maxit=100){
+require(debug)
+
+finite_diff <- function(theta, f) {
+  # Purpose: Find gradiant vector of f at point theta using finite differentiation.
+  # Input:  theta - Vector, the location where we want to differentiate f
+  #         f     - Function to differentiate
+  
+  # Output: The value of f' at point theta.
+
+  #TODO: Should our initial value for the delta be this or 0?
+  f_dtheta <- theta
+  
+  # https://stackoverflow.com/questions/2619543/how-do-i-obtain-the-machine-epsilon-in-r
+  # For nice functions, the square root of machine precision yields the optimum value for epsilon
+  # Too big and our gradient is incorrect, too small and the computer cannot store the value.
+  eps <- sqrt(.Machine$double.eps)
+  
+  for (i in 1:length(theta)) { ## loop over parameters/dimensions
+    th1 <- theta
+    th1[i] <- th1[i] + eps ## move eps in dimension i
+    f_dtheta[i] <- (f(th1, ...) - f(theta, ...))/eps ## approximate -df/dth[i]
+  }
+  
+  f_dtheta
+}
+
+bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Purpose:
     # Input:  theta - vector of intial values for optimization parameters
     #         f     - objective function to minimise
@@ -26,15 +52,7 @@ bfgs <- function(theta,f,...,tol=1e-5,fscale=1,maxit=100){
 
   for (j in 1:maxit){
 
-    # Finite differencing to find gradiant vector of f
-    f_dtheta0 <- th0 <- theta0
-    eps <- 1e-7 ## step length for finite differencing
-    for (i in 1:length(th0)) { ## loop over parameters
-      th1 <- th0; th1[i] <- th1[i] + eps ## increase th0[i] by eps
-      f_dtheta0[i] <- (f(th1) - f(th0))/eps ## approximate -dl/dth[i]
-    }
-    print('grad vector for f at intial theta')
-    print(f_dtheta0)
+    f_dtheta0 <- finite_diff(theta0, f)
 
     # Quasi Newton step from theta0 to theta1 
     delta <- drop(-B %*% f_dtheta0)
@@ -86,12 +104,6 @@ bfgs <- function(theta,f,...,tol=1e-5,fscale=1,maxit=100){
   #return(outputs)
   
 }
-
-g <- function(theta){
-  return(theta[1]^2 + 2*theta[2])
-}
-
-
 
 # Test function Simon provided (Used to check the Quasi method)
 rb <- function(theta,getg=FALSE,k=100) {
