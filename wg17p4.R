@@ -1,7 +1,7 @@
 require(debug)
 
 finite_diff <- function(theta, f) {
-  # Purpose: Find gradiant vector of f at point theta using finite differentiation.
+  # Purpose: Find gradient vector of f at point theta using finite differentiation.
   # Input:  theta - Vector, the location where we want to differentiate f
   #         f     - Function to differentiate
   
@@ -18,7 +18,7 @@ finite_diff <- function(theta, f) {
   for (i in 1:length(theta)) { ## loop over parameters/dimensions
     th1 <- theta
     th1[i] <- th1[i] + eps ## move eps in dimension i
-    f_dtheta[i] <- (f(th1, ...) - f(theta, ...))/eps ## approximate -df/dth[i]
+    f_dtheta[i] <- (f(th1) - f(theta))/eps ## approximate -df/dth[i]
   }
   
   f_dtheta
@@ -52,7 +52,15 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
 
   for (j in 1:maxit){
 
-    f_dtheta0 <- finite_diff(theta0, f)
+    f_theta <- f(theta0, ...)
+    
+    # Do we need to calculate the gradient?
+    f_grad <- attr(f_theta, "gradient")
+    if(is.null(f_grad)) {
+      f_dtheta0 <- finite_diff(theta0, f)
+    } else {
+      f_dtheta0 <- f_grad
+    }
 
     # Quasi Newton step from theta0 to theta1 
     delta <- drop(-B %*% f_dtheta0)
@@ -117,5 +125,9 @@ rb <- function(theta,getg=FALSE,k=100) {
   f
 } ##
 
+test_binomial <- function(theta) {
+  2* theta[1]^3 - 7*theta[2]^2
+}
 
-bfgs(initial, rb, maxit = 40)
+mtrace(bfgs)
+bfgs(c(0,1), rb, getg=TRUE, maxit = 40)
