@@ -24,10 +24,9 @@ finite_diff <- function(theta, f) {
   f_dtheta
 }
 
-get_gradient <- function(f_theta) {
+get_gradient <- function(f, theta, f_theta) {
   # Purpose: Get the gradient of function f at point theta.
   
-  # Do we need to calculate the gradient?
   f_grad <- attr(f_theta, "gradient")
   if(is.null(f_grad)) {
     f_dtheta <- finite_diff(theta, f)
@@ -78,7 +77,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     iter <- iter + 1
     
     f_theta0 <- f(theta0, ...)
-    grad_theta0 <- get_gradient(f_theta0)
+    grad_theta0 <- get_gradient(f, theta0, f_theta0)
 
     # Quasi Newton step from theta0 to theta1 
     delta <- drop(-B %*% grad_theta0)
@@ -89,7 +88,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     print(theta1)
     
     f_theta1 <- f(theta1, ...)
-    grad_theta1 <- get_gradient(f_theta1)
+    grad_theta1 <- get_gradient(f, theta1, f_theta1)
     print('grad vec of f at new theta')
     print(grad_theta1)
 
@@ -145,5 +144,5 @@ test_binomial <- function(theta) {
   2* theta[1]^3 - 7*theta[2]^2
 }
 
-mtrace(has_converged)
+#mtrace(has_converged)
 bfgs(c(-1,2), rb, getg=TRUE, maxit = 40)
