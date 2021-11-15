@@ -46,6 +46,72 @@ has_converged <- function(f_val, f_grad, fscale, tol) {
   }
 }
 
+second_wolfe <- function(delta, f, theta) {
+  theta_delta <- theta + delta
+  theta_delta_grad <- finite_diff(theta_delta, f)
+  left_side <- t(theta_delta_grad) %*% delta
+  right_side <- 0.9* t(finite_diff(theta, f)) %*% delta
+  
+  left_side >= right_side
+}
+
+reduces_obj <- function(f, theta, step) {
+  if(f(theta) > f(theta + step)) {
+    TRUE
+  }
+  FALSE
+}
+
+enqueue <- function(list, ...) {
+  list <- c(list(...), list)
+  list
+}
+
+dequeue <- function(list) {
+  first <- list[[1]]
+  list <- list[-1]
+  list(first, list)
+}
+
+bfs <- function(step_v, f, theta) {
+  Q <- list(step_v)
+  # Maybe set val to infinity?
+  val <- step_v
+  
+  while(length(Q) != 0) {
+
+    q_v <- dequeue(Q)
+    print("Finding step length. Testing:")
+    print(q_v)
+    val <- q_v[[1]]
+    Q <- q_v[[2]]
+    
+    # Sufficient conditions for good step length    
+    if(second_wolfe(val, f, theta) & reduces_obj(f, theta, val)) {
+      break
+    }
+    
+    # Since this is all based on Taylor, we do not stray too far from the original step
+    next_up <- val * 1.5
+    next_down <- val / 2
+    Q <- enqueue(Q, next_up)
+    Q <- enqueue(Q, next_down)
+  }
+  val
+}
+
+get_step <- function(B, f, theta, grad_theta0) {
+  f_theta <- f(theta)
+  
+  #This is our step vector
+  step <- drop(-B %*% grad_theta0)
+
+  #Perform a bfs search on [theta, theta +step] to find a step length
+  #step <- bfs(step, f, theta)
+  
+  step
+}
+
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Purpose:
     # Input:  theta - vector of intial values for optimization parameters
@@ -80,7 +146,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     grad_theta0 <- get_gradient(f, theta0, f_theta0)
 
     # Quasi Newton step from theta0 to theta1 
-    delta <- drop(-B %*% grad_theta0)
+    delta <- get_step(B, f, theta0, grad_theta0)#drop(-B %*% grad_theta0)
 
     # New theta value 
     theta1 <- theta0 + delta
@@ -140,9 +206,5 @@ rb <- function(theta,getg=FALSE,k=10) {
   f
 } ##
 
-test_binomial <- function(theta) {
-  2* theta[1]^3 - 7*theta[2]^2
-}
-
-#mtrace(has_converged)
 bfgs(c(-1,2), rb, getg=TRUE, maxit = 40)
+
