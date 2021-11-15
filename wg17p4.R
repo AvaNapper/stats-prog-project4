@@ -46,6 +46,86 @@ has_converged <- function(f_val, f_grad, fscale, tol) {
   }
 }
 
+second_wolfe <- function(delta, f, theta) {
+  theta_delta <- theta + delta
+  theta_delta_grad <- finite_diff(theta_delta, f)
+  left_side <- t(theta_delta_grad) %*% delta
+  right_side <- 0.9* t(finite_diff(theta)) %*% delta
+  
+  left_side >= right_side
+}
+
+seq_vec <- function(a, b, n) {
+  # This could be done much smarter by X x a where X is a matrix 
+  # where the first row is 1, the second is 1.1, 1.2, 1.3 etc. until 2.
+  # then you have put all the points between 1 and 2 with step length 0.1 in
+  # the matrix.
+  res <- matrix(a)
+  delta <- (b-a)/n
+  a_k <- a
+  iter <- 0
+  
+  while(a_k != b & iter <= n) {
+    a_k <- a_k + delta
+    res <- cbind(res, a_k)
+  }
+  res
+}
+
+enqueue <- function(list, item) {
+  list <- append(item, list)
+  list
+}
+
+dequeue <- function(list) {
+  first <- list[[1]]
+  list <- list[-1]
+  list(first, list)
+}
+
+bfs <- function(root) {
+  Q <- list(root)
+  # Maybe set val to infinity?
+  val <- root
+
+  while(length(Q) != 0) {
+    q_v <- dequeue(Q)
+    val <- q_v[[1]]
+    Q <- q_v[[2]]
+    # This should be if all conditions are good
+    if(val == 4) {
+      break
+    }
+    next_up <- val * 1.5
+    next_down <- val / 2
+    Q <- enqueue(Q, next_up)
+    Q <- enqueue(Q, next_down)
+  }
+  val
+}
+
+foo <- bfs(8)
+
+get_step <- function(B, f, theta) {
+  old_val <- f(theta)
+  grad_theta0 <- get_gradient(f, theta, old_val)
+  step <- drop(-B %*% grad_theta0)
+  c_2 <- 0.9
+  step_len <- norm(step, type="2")
+  
+  #Binary search comes to mind. We want the step with the greatest obj decrease where the conditions hold:
+  # Wolfe 2
+  # Reduce the obj function
+  # objective value is finite
+  
+  # the search area is twice the original length(I think that is sensible because taylor is only good close?)
+  theta_min_candidates <- seq_vec(theta, theta + step*2, 100)
+  # LAPPLY IS NEXT
+  theta_min_vals <- lapply(theta_min_candidates, f)
+  smallest_id <- which.min(theta_min_vals)
+  theta_min_candidates[smallest_id]
+}
+
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Purpose:
     # Input:  theta - vector of intial values for optimization parameters
@@ -79,8 +159,8 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     f_theta0 <- f(theta0, ...)
     grad_theta0 <- get_gradient(f, theta0, f_theta0)
 
-    # Quasi Newton step from theta0 to theta1 
-    delta <- drop(-B %*% grad_theta0)
+    # Quasi Newton step from theta0 to theta1 that satisfies wolfe conditions
+    delta <- get_step(B, f, theta)
 
     # New theta value 
     theta1 <- theta0 + delta
@@ -140,9 +220,5 @@ rb <- function(theta,getg=FALSE,k=10) {
   f
 } ##
 
-test_binomial <- function(theta) {
-  2* theta[1]^3 - 7*theta[2]^2
-}
-
-#mtrace(has_converged)
+mtrace(get_step)
 bfgs(c(-1,2), rb, getg=TRUE, maxit = 40)
