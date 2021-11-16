@@ -1,4 +1,3 @@
-require(debug)
 
 finite_diff <- function(theta, f) {
   # Purpose: Find gradient vector of f at point theta using finite differentiation.
@@ -56,14 +55,12 @@ second_wolfe <- function(delta, f, theta) {
 }
 
 reduces_obj <- function(f, theta, step) {
-  if(f(theta) > f(theta + step)) {
-    TRUE
-  }
-  FALSE
+  f(theta) > f(theta + step)
 }
 
 enqueue <- function(list, ...) {
-  list <- c(list(...), list)
+  list <- c(list, list(...))
+  list <- list[!duplicated(list)]
   list
 }
 
@@ -77,14 +74,19 @@ bfs <- function(step_v, f, theta) {
   Q <- list(step_v)
   # Maybe set val to infinity?
   val <- step_v
+  count <- 0
   
   while(length(Q) != 0) {
 
     q_v <- dequeue(Q)
-    print("Finding step length. Testing:")
-    print(q_v)
+
     val <- q_v[[1]]
     Q <- q_v[[2]]
+    
+    print("Finding step length. Testing:")
+    print(val)
+    print("queue size:")
+    print(length(Q))
     
     # Sufficient conditions for good step length    
     if(second_wolfe(val, f, theta) & reduces_obj(f, theta, val)) {
@@ -96,7 +98,12 @@ bfs <- function(step_v, f, theta) {
     next_down <- val / 2
     Q <- enqueue(Q, next_up)
     Q <- enqueue(Q, next_down)
+    count <- count+1
   }
+  
+  print("found step length in ")
+  print(count)
+  print("number of iterations")
   val
 }
 
@@ -106,10 +113,13 @@ get_step <- function(B, f, theta, grad_theta0) {
   #This is our step vector
   step <- drop(-B %*% grad_theta0)
 
-  #Perform a bfs search on [theta, theta +step] to find a step length
-  #step <- bfs(step, f, theta)
+  #Perform a bfs search on [theta, theta +step] to find a step length that:
+  # 1. Decreases the objective(f) 2. Satisfies the second wolfe condition
+  n_step <- bfs(step, f, theta)
+  print("Found new step")
+  print(step)
   
-  step
+  n_step
 }
 
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
