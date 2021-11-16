@@ -93,11 +93,19 @@ bfs <- function(step_v, f, theta) {
       break
     }
     
-    # Since this is all based on Taylor, we do not stray too far from the original step
-    next_up <- val * 1.5
-    next_down <- val / 2
-    Q <- enqueue(Q, next_up)
-    Q <- enqueue(Q, next_down)
+    # Have we gone too far and increased the target value?
+    if(!reduces_obj(f, theta, val)) {
+      # Since this is all based on local approximations, we do not stray too far from the original step
+      next_val <- val /2
+    } else if(!second_wolfe(val, f)) {
+      # Have we gone too short and are in a concave part of the target function?
+      next_val <- val * 1.5
+    } else {
+      ## We reduced the obj and second_wolfe. Spend time in next step instead of optimizing length more
+      break
+    }
+    Q <- enqueue(Q, next_val)
+    
     count <- count+1
   }
   
@@ -216,5 +224,5 @@ rb <- function(theta,getg=FALSE,k=10) {
   f
 } ##
 
-bfgs(c(-1,2), rb, getg=TRUE, maxit = 40)
+bfgs(c(-1,2), rb, getg=FALSE, maxit = 40)
 
