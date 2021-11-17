@@ -1,10 +1,18 @@
+# 17 Ava Napper, Baldur Björnsson, Madeleine Reid
+# https://github.com/AvaNapper/stats-prog-project4
+
+# The purpose of this project is to create a function which minimises a function,
+# using the BFGS quasi-Newton method, without the use of R's default optimisation
+# functions such as optim() or nlm().
+
 
 finite_diff <- function(theta, f) {
-  # Purpose: Find gradient vector of f at point theta using finite differentiation.
+  # Purpose: Find gradient vector of f at point theta using finite differencing.
+  
   # Input:  theta - Vector, the location where we want to differentiate f
   #         f     - Function to differentiate
   
-  # Output: The value of f' at point theta.
+  # Output: f_dtheta  - the gradient vector for function f at theta, obtained by finite differencing
 
   #TODO: Should our initial value for the delta be this or 0?
   f_dtheta <- theta
@@ -23,9 +31,18 @@ finite_diff <- function(theta, f) {
   f_dtheta
 }
 
+# SHould we combine this function and the one above?
 get_gradient <- function(f, theta, f_theta) {
   # Purpose: Get the gradient of function f at point theta.
   
+  # Input:  f       - the function whose gradient we want
+  #         theta   - vector corresponding to the location where the gradient is calculated
+  #         f_theta - the value of the function at the location of interest
+  
+  # Output: f_dtheta  - value of gradient, obtained by finite differencing
+  
+  # Check if the function provided has a gradient attribute
+  # If not, calculate gradient vector using finite differencing
   f_grad <- attr(f_theta, "gradient")
   if(is.null(f_grad)) {
     f_dtheta <- finite_diff(theta, f)
@@ -37,15 +54,39 @@ get_gradient <- function(f, theta, f_theta) {
 }
 
 has_converged <- function(f_val, f_grad, fscale, tol) {
+  # Purpose: Determine if a function has converged.
+  
+  # Input:  f_val   - function output at value
+  #         f_grad  - gradient vector at value
+  #         fscale  - rough estimate of the magnitude of f at the optimum
+  #         tol     - the convergence tolerance
+  
+  # Output: val - boolean indicating if function has converged 
+  
+  # If the maximum absolute value of the gradient vector is less than
+  # the absolute value of the function at the value plus the scale, 
+  # multiplied by the convergence tolerance, convergence is accepted
   val <- max(abs(f_grad)) < (abs(f_val)+fscale)*tol
   if (is.na(val)) {
     FALSE
   } else {
     val
   }
-}
+} 
 
 second_wolfe <- function(delta, f, theta) {
+  # Purpose: Check if the gradient does not increase (Wolfe condition 2)
+  
+  # Input:  delta - vector representing the step length
+  #         f     - function which is being optimised
+  #         theta - vector representing location before step
+  
+  # Output: boolean indicating if the condition was satisfied
+  
+  # Obtain new vector of theta by adding step length to initial theta
+  # and calculate gradient at this new point.
+  # If the old gradient is smaller than the new one, the condition is not satisfied.
+  # Otherwise, condition is met and function returns TRUE
   theta_delta <- theta + delta
   theta_delta_grad <- finite_diff(theta_delta, f)
   left_side <- t(theta_delta_grad) %*% delta
@@ -55,6 +96,14 @@ second_wolfe <- function(delta, f, theta) {
 }
 
 reduces_obj <- function(f, theta, step) {
+  # Purpose: Check if the objective function has decreased (Wolfe condition 1)
+  
+  # Input:  f     - function which is being optimised
+  #         theta - vector representing location before step
+  #         step  - vector representing step lecth
+  
+  # Output: boolean indicating if the condition was satisfied
+  
   f(theta) > f(theta + step)
 }
 
@@ -132,16 +181,16 @@ get_step <- function(B, f, theta, grad_theta0) {
 
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Purpose:
-    # Input:  theta - vector of intial values for optimization parameters
+    # Input:  theta - vector of initial values for optimization parameters
     #         f     - objective function to minimise
     #                 first argument is vector of optimization parameters
     #                 second argument is logical, should the gradients of the 
-    #                   objective function w.r.t. parameters be computed
+    #                 objective function w.r.t. parameters be computed
     #         tol   - convergence tolerance
     #         maxit - max number of BFGS iterations to try
     #
     #
-    # Output: f     - scalar value of objective func at the minimum
+    # Output: f     - scalar value of objective function at the minimum
     #         theta - vector of values of parameters at minimum
     #         iter  - number of iterations it took to reach maximum
     #         g     - gradient vector at the minimum
@@ -161,11 +210,19 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     iter <- iter + 1
     
     f_theta0 <- f(theta0, ...)
+    if (is.na(f_theta0))  stop("function is not defined at initial theta")
+  
     grad_theta0 <- get_gradient(f, theta0, f_theta0)
+    for (i in 1:length(grad_theta0)) {
+      if (is.na(grad_theta0[i])) stop("derivatives are not defined at initial theta")
+    }
 
     # Quasi Newton step from theta0 to theta1 
     delta <- get_step(B, f, theta0, grad_theta0)#drop(-B %*% grad_theta0)
-
+    print("delta")
+    print(delta)
+    
+    
     # New theta value 
     theta1 <- theta0 + delta
     print('new theta val')
@@ -175,7 +232,24 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     grad_theta1 <- get_gradient(f, theta1, f_theta1)
     print('grad vec of f at new theta')
     print(grad_theta1)
+    
+    
+    # Hfd <- matrix(0, 2, 2)
+    # eps <- sqrt(.Machine$double.eps)
+    # 
+    # for (i in 1:length(theta0)) {
+    #   theta_temp <- theta0
+    #   theta_temp[i] <- theta1[i]
+    #   f_theta_temp <- f(theta_temp, ...)
+    #   grad_temp <- get_gradient(f, theta_temp, f_theta_temp)
+    #   Hfd[i,] <- (grad_temp - grad_theta0) / eps
+    # }
+    # 
 
+    # for (i in 1:length(theta0)) {
+    #   Hfd[i,] <- (grad_theta1 - grad_theta0) / eps
+    # }
+    
     # Initial s and y vectors. Can this just be delta?
     step_k <- theta1 - theta0
     step_k_t <- t(step_k)
@@ -200,14 +274,20 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     if(has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
       break
     }
+    
     theta0 <- theta1
   }
-
+  
+  if(has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE) 
+    warning("max iterations reached without convergence")
+  
   bfgs_res = list(
     f=f(theta0),
     theta=theta0,
     iter=iter,
     g=grad_theta0
+    #H = 0.5 * (t(Hfd) + Hfd),
+    #H1 = backsolve(B, diag(length(theta)))
   )
   bfgs_res
 }
@@ -226,3 +306,6 @@ rb <- function(theta,getg=FALSE,k=10) {
 
 bfgs(c(-1,2), rb, getg=FALSE, maxit = 40)
 
+
+optim(c(-1, 2), rb, method = "BFGS", hessian = TRUE)
+nlm(rb, c(-1, 2), hessian= TRUE)
