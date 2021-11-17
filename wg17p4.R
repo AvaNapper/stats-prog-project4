@@ -232,28 +232,17 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     grad_theta1 <- get_gradient(f, theta1, f_theta1)
     print('grad vec of f at new theta')
     print(grad_theta1)
-    
-    
-    # Hfd <- matrix(0, 2, 2)
-    # eps <- sqrt(.Machine$double.eps)
-    # 
-    # for (i in 1:length(theta0)) {
-    #   theta_temp <- theta0
-    #   theta_temp[i] <- theta1[i]
-    #   f_theta_temp <- f(theta_temp, ...)
-    #   grad_temp <- get_gradient(f, theta_temp, f_theta_temp)
-    #   Hfd[i,] <- (grad_temp - grad_theta0) / eps
-    # }
-    # 
 
-    # for (i in 1:length(theta0)) {
-    #   Hfd[i,] <- (grad_theta1 - grad_theta0) / eps
-    # }
-    
     # Initial s and y vectors. Can this just be delta?
     step_k <- theta1 - theta0
     step_k_t <- t(step_k)
     y_k <- grad_theta1 - grad_theta0
+    
+    print("step_k")
+    print(step_k)
+    
+    print("step_k_t")
+    print(step_k_t)
 
     rho_inv_k <- drop(step_k_t %*% y_k)
     
@@ -271,11 +260,24 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     print('new B')
     print(B)
     
+    
+    
     if(has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
       break
     }
     
     theta0 <- theta1
+  }
+  
+  Hfd <- matrix(0, 2, 2)
+  eps <- sqrt(.Machine$double.eps)
+  
+  for (i in 1:length(theta0)) {
+    theta_temp <- theta0
+    theta_temp[i] <- theta_temp[i] + eps
+    f_theta_temp <- f(theta_temp,...)
+    grad_temp <- get_gradient(f, theta_temp, f_theta_temp)
+    Hfd[i,] <- (grad_temp - grad_theta0) / eps
   }
   
   if(has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE) 
@@ -285,9 +287,9 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     f=f(theta0),
     theta=theta0,
     iter=iter,
-    g=grad_theta0
-    #H = 0.5 * (t(Hfd) + Hfd),
-    #H1 = backsolve(B, diag(length(theta)))
+    g=grad_theta0,
+    H = 0.5 * (t(Hfd) + Hfd),
+    H1 = solve(B, diag(length(theta)))
   )
   bfgs_res
 }
