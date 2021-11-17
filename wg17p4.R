@@ -31,7 +31,7 @@ finite_diff <- function(theta, f) {
   f_dtheta
 }
 
-# SHould we combine this function and the one above?
+# Should we combine this function and the one above?
 get_gradient <- function(f, theta, f_theta) {
   # Purpose: Get the gradient of function f at point theta.
   
@@ -44,7 +44,7 @@ get_gradient <- function(f, theta, f_theta) {
   # Check if the function provided has a gradient attribute
   # If not, calculate gradient vector using finite differencing
   f_grad <- attr(f_theta, "gradient")
-  if(is.null(f_grad)) {
+  if (is.null(f_grad)) {
     f_dtheta <- finite_diff(theta, f)
   } else {
     f_dtheta <- f_grad
@@ -90,7 +90,7 @@ second_wolfe <- function(delta, f, theta) {
   theta_delta <- theta + delta
   theta_delta_grad <- finite_diff(theta_delta, f)
   left_side <- t(theta_delta_grad) %*% delta
-  right_side <- 0.9* t(finite_diff(theta, f)) %*% delta
+  right_side <- 0.9 * t(finite_diff(theta, f)) %*% delta
   
   left_side >= right_side
 }
@@ -125,7 +125,7 @@ bfs <- function(step_v, f, theta) {
   val <- step_v
   count <- 0
   
-  while(length(Q) != 0) {
+  while (length(Q) != 0) {
 
     q_v <- dequeue(Q)
 
@@ -138,15 +138,15 @@ bfs <- function(step_v, f, theta) {
     print(length(Q))
     
     # Sufficient conditions for good step length    
-    if(second_wolfe(val, f, theta) & reduces_obj(f, theta, val)) {
+    if (second_wolfe(val, f, theta) & reduces_obj(f, theta, val)) {
       break
     }
     
     # Have we gone too far and increased the target value?
-    if(!reduces_obj(f, theta, val)) {
+    if (!reduces_obj(f, theta, val)) {
       # Since this is all based on local approximations, we do not stray too far from the original step
-      next_val <- val /2
-    } else if(!second_wolfe(val, f)) {
+      next_val <- val/2
+    } else if (!second_wolfe(val, f, theta)) {
       # Have we gone too short and are in a concave part of the target function?
       next_val <- val * 1.5
     } else {
@@ -155,7 +155,7 @@ bfs <- function(step_v, f, theta) {
     }
     Q <- enqueue(Q, next_val)
     
-    count <- count+1
+    count <- count + 1
   }
   
   print("found step length in ")
@@ -247,7 +247,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     rho_inv_k <- drop(step_k_t %*% y_k)
     
     # rho_inv_k is a scalar
-    rho_k <- 1/ rho_inv_k
+    rho_k <- 1/rho_inv_k
     print('rho')
     print(rho_k)
 
@@ -260,9 +260,10 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     print('new B')
     print(B)
     
+    if (reduces_obj(f, theta0, delta) == FALSE & has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE)
+      warning("objective not reduced and convergence not met")
     
-    
-    if(has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
+    if (has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
       break
     }
     
@@ -280,16 +281,15 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     Hfd[i,] <- (grad_temp - grad_theta0) / eps
   }
   
-  if(has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE) 
+  if (has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE) 
     warning("max iterations reached without convergence")
   
   bfgs_res = list(
-    f=f(theta0),
-    theta=theta0,
-    iter=iter,
-    g=grad_theta0,
-    H = 0.5 * (t(Hfd) + Hfd),
-    H1 = solve(B, diag(length(theta)))
+    f = f(theta0),
+    theta = theta0,
+    iter = iter,
+    g = grad_theta0,
+    H = 0.5 * (t(Hfd) + Hfd)
   )
   bfgs_res
 }
@@ -310,4 +310,4 @@ bfgs(c(-1,2), rb, getg=FALSE, maxit = 40)
 
 
 optim(c(-1, 2), rb, method = "BFGS", hessian = TRUE)
-nlm(rb, c(-1, 2), hessian= TRUE)
+nlm(rb, c(-1, 2), hessian = TRUE)
