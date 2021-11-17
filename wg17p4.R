@@ -4,7 +4,7 @@
 # The purpose of this project is to create a function which minimises a function,
 # using the BFGS quasi-Newton method, without the use of R's default optimisation
 # functions such as optim() or nlm().
-
+require(debug)
 
 finite_diff <- function(theta, f) {
   # Purpose: Find gradient vector of f at point theta using finite differencing.
@@ -169,6 +169,11 @@ get_step <- function(B, f, theta, grad_theta0) {
   
   #This is our step vector
   step <- drop(-B %*% grad_theta0)
+  
+  if(all(step == 0)) {
+    # Nothing to do here
+    return(step)
+  }
 
   #Perform a bfs search on [theta, theta +step] to find a step length that:
   # 1. Decreases the objective(f) 2. Satisfies the second wolfe condition
@@ -306,8 +311,16 @@ rb <- function(theta,getg=FALSE,k=10) {
   f
 } ##
 
-bfgs(c(-1,2), rb, getg=FALSE, maxit = 40)
+quad <- function(theta, getg=FALSE, m=10) {
+  print("this is m")
+  print(m)
+  x <- theta[1]
+  y <- theta[2]
+  (x^2 + 10*x -5) + y^2 + m
+}
+
+bfgs(c(2, 3), quad, getg=FALSE, maxit = 40)
 
 
-optim(c(-1, 2), rb, method = "BFGS", hessian = TRUE)
+optim(2, quad, method = "BFGS", hessian = TRUE)
 nlm(rb, c(-1, 2), hessian = TRUE)
