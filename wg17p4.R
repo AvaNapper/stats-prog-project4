@@ -168,7 +168,7 @@ bfs <- function(step_v, f, theta, ...) {
     if (!reduces_obj(f, theta, val, ...)) {
       # Since this is all based on local approximations, we do not stray too far from the original step
       next_val <- val/2
-    } else if (!second_wolfe(val, f, theta)) {
+    } else if (!second_wolfe(val, f, theta, ...)) {
       # Have we gone too short and are in a concave part of the target function?
       next_val <- val * 1.5
     } else {
@@ -264,7 +264,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Is there some optimization to be done here by first calculating the rightmost matrix multiplication?
     B <- expression1 %*% B %*% expression2 + expression3
     
-    if (reduces_obj(f, theta0, delta) == FALSE & has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE)
+    if (reduces_obj(f, theta0, delta, ...) == FALSE & has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE)
       warning("objective not reduced and convergence not met")
     
     if (has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
@@ -310,7 +310,7 @@ rb <- function(theta,getg=FALSE,k=10) {
   f
 } ##
 
-quad <- function(theta, getg=FALSE, m=10) {
+quad <- function(theta, getg=FALSE, m) {
   print("this is m")
   print(m)
   x <- theta[1]
