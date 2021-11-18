@@ -4,7 +4,7 @@
 # The purpose of this project is to create a function which minimises a function,
 # using the BFGS quasi-Newton method, without the use of R's default optimisation
 # functions such as optim() or nlm().
-#require(debug)
+require(debug)
 
 finite_diff <- function(theta, f, ...) {
   # Purpose: Find gradient vector of f at point theta using finite differencing.
@@ -102,7 +102,7 @@ reduces_obj <- function(f, theta, step, ...) {
   
   # Input:  f     - function which is being optimised
   #         theta - vector representing location before step
-  #         step  - vector representing step lecth
+  #         step  - vector representing step length
   
   # Output: boolean indicating if the condition was satisfied
   
