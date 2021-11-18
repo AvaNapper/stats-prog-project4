@@ -4,7 +4,7 @@
 # The purpose of this project is to create a function which minimises a function,
 # using the BFGS quasi-Newton method, without the use of R's default optimisation
 # functions such as optim() or nlm().
-require(debug)
+#require(debug)
 
 finite_diff <- function(theta, f, ...) {
   # Purpose: Find gradient vector of f at point theta using finite differencing.
@@ -229,14 +229,18 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
   while (iter < maxit) {
     iter <- iter + 1
     
+    # Evaluate function at initial theta
+    # If function is not finite at this value, stop process
     f_theta0 <- f(theta0, ...)
-    if (is.na(f_theta0))  stop("function is not defined at initial theta")
-  
+    if (!is.finite(f_theta0))  stop("function is not finite at initial theta")
+    
+    # Calculate the gradient vector at initial theta
+    # If vector contains a non-finite element, stop process
     grad_theta0 <- get_gradient(f, theta0, f_theta0, ...)
     for (i in 1:length(grad_theta0)) {
-      if (is.na(grad_theta0[i])) stop("derivatives are not defined at initial theta")
+      if (!is.finite(grad_theta0[i])) stop("derivatives are not finite at initial theta")
     }
-
+    
     # Quasi Newton step from theta0 to theta1 
     delta <- get_step(B, f, theta0, grad_theta0, ...)
     
@@ -264,16 +268,18 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     # Is there some optimization to be done here by first calculating the rightmost matrix multiplication?
     B <- expression1 %*% B %*% expression2 + expression3
     
+    # If the objective is not reduced and convergence has not occurred, issue warning
     if (reduces_obj(f, theta0, delta) == FALSE & has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE)
       warning("objective not reduced and convergence not met")
     
     if (has_converged(f_theta0, grad_theta0, fscale, tol) == TRUE) {
       break
     }
-    
     theta0 <- theta1
   }
   
+  # Evaluate approximate Hessian matrix at the minimum by finite differencing 
+  # the gradient vector
   Hfd <- matrix(0, 2, 2)
   eps <- sqrt(.Machine$double.eps)
   
@@ -285,6 +291,8 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     Hfd[i,] <- (grad_temp - grad_theta0) / eps
   }
   
+  # If convergence has not occurred within the maximum number of iterations allowed,
+  # issue warning
   if (has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE) 
     warning("max iterations reached without convergence")
   
@@ -326,5 +334,5 @@ bfgs(c(2, 3), rb, getg=FALSE, maxit = 40)
 
 optim(c(-1, 2), rb_1, method = "BFGS", hessian = TRUE)
 
-optim(2, quad, method = "BFGS", hessian = TRUE)
+optim(c(2, 3), quad, method = "BFGS", hessian = TRUE)
 nlm(rb, c(-1, 2), hessian = TRUE)
