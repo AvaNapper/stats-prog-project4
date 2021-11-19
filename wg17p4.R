@@ -1,10 +1,9 @@
 # 17 Ava Napper, Baldur Björnsson, Madeleine Reid
 # https://github.com/AvaNapper/stats-prog-project4
 
-# The purpose of this project is to create a function which minimises a function,
-# using the BFGS quasi-Newton method, without the use of R's default optimisation
+# The purpose of this project is to create a function which minimizes a function,
+# using the BFGS quasi-Newton method, without the use of R's default optimization
 # functions such as optim() or nlm().
-require(debug)
 
 finite_diff <- function(theta, f, ...) {
   # Purpose: Find gradient vector of f at point theta using finite differencing.
@@ -14,10 +13,8 @@ finite_diff <- function(theta, f, ...) {
   
   # Output: f_dtheta  - the gradient vector for function f at theta, obtained by finite differencing
 
-  #TODO: Should our initial value for the delta be this or 0?
   f_dtheta <- theta
   
-  # https://stackoverflow.com/questions/2619543/how-do-i-obtain-the-machine-epsilon-in-r
   # For nice functions, the square root of machine precision yields the optimum value for epsilon
   # Too big and our gradient is incorrect, too small and the computer cannot store the value.
   eps <- sqrt(.Machine$double.eps)
@@ -31,7 +28,6 @@ finite_diff <- function(theta, f, ...) {
   f_dtheta
 }
 
-# Should we combine this function and the one above?
 get_gradient <- function(f, theta, f_theta, ...) {
   # Purpose: Get the gradient of function f at point theta.
   
@@ -104,7 +100,7 @@ reduces_obj <- function(f, theta, step, ...) {
   #         theta - vector representing location before step
   #         step  - vector representing step length
   
-  # Output: boolean indicating if the condition was satisfied
+  # Output: boolean indicating if f at theta + step is smaller than f of theta
   
   f(theta, ...) > f(theta + step, ...)
 }
@@ -139,8 +135,8 @@ dequeue <- function(list) {
 }
 
 bfs <- function(step_v, f, theta, ...) {
-  # Purpose:  Perform a bfs to find a vector that is a multiple of step_v,
-  #           satisfies the second wolfe and decreases the value of f.
+  # Purpose:  Perform a breadth first search(bfs) to find a vector that is  a multiple
+  #           of step_v, satisfies the second wolfe and decreases the value of f.
   
   # Input:    step_v  - Initial step vector. All values tested are on this line.
   #           f       - The objective function. Used to evaluate wolfe and check if 
@@ -153,7 +149,8 @@ bfs <- function(step_v, f, theta, ...) {
   #           satisfies the second wolfe and decreases f.
   
   Q <- list(step_v)
-  # Maybe set val to infinity?
+
+  # Put the starting step into the iterative variable
   val <- step_v
   count <- 0
   
@@ -166,13 +163,13 @@ bfs <- function(step_v, f, theta, ...) {
     
     # Have we gone too far and increased the target value?
     if (!reduces_obj(f, theta, val, ...)) {
-      # Since this is all based on local approximations, we do not stray too far from the original step
+      # Since this is all based on local approximations, we chose 0.5 and 1.5 to move modestly
       next_val <- val/2
     } else if (!second_wolfe(val, f, theta, ...)) {
-      # Have we gone too short and are in a concave part of the target function?
+      # Have we not gone far enough and are in a concave part of the target function?
       next_val <- val * 1.5
     } else {
-      ## We reduced the obj and second_wolfe. Spend time in next step instead of optimizing length more
+      ## We reduced the obj and second wolfe. Spend time in next step instead of optimizing length more
       break
     }
     Q <- enqueue(Q, next_val)
@@ -184,6 +181,17 @@ bfs <- function(step_v, f, theta, ...) {
 }
 
 get_step <- function(B, f, theta, grad_theta0, ...) {
+  # Purpose:  Get the step vector we should take to decrease f
+  
+  # Input:    B           - The matrix of bfgs update. The previous gradient is 
+  #                         multiplied by this matrix to get the new one.
+  #           f           - The objective function.
+  #           theta       - Our starting point.
+  #           grad_theta0 - The gradient of f at theta0
+  #           '...'       - A variable argument parameter that is passed to f each time 
+  #                         it is called.
+  
+  # Output:   A step that optimizes f. Referred to as delta[k] in the algorithms
   f_theta <- f(theta, ...)
   
   #Our initial step vector. We might change the length
@@ -194,29 +202,29 @@ get_step <- function(B, f, theta, grad_theta0, ...) {
     return(step)
   }
 
-  #Perform a breadth first search(bfs) on [theta, theta +step] to find a length that:
-  # 1. Decreases the objective(f) 2. Satisfies the second wolfe condition
+  #Perform a breadth first search(bfs) on [theta, theta +step] to find a good step length 
   n_step <- bfs(step, f, theta, ...)
   
   n_step
 }
 
 bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
-    # Purpose:
-    # Input:  theta - vector of initial values for optimization parameters
-    #         f     - objective function to minimise
-    #                 first argument is vector of optimization parameters
-    #                 second argument is logical, should the gradients of the 
-    #                 objective function w.r.t. parameters be computed
-    #         tol   - convergence tolerance
-    #         maxit - max number of BFGS iterations to try
+    # Purpose:  Analytically minimize the function f, starting at theta.
+    # Input:    theta - vector of initial values for optimization parameters
+    #           f     - objective function to minimize
+    #                   first argument is vector of optimization parameters
+    #                   second argument is getg. It is logical, should the gradients of the 
+    #                  objective function w.r.t. parameters be computed
+    #           tol   - convergence tolerance
+    #           fscale- A rough estimate of the magnitude of f at the optimum.
+    #           maxit - max number of BFGS iterations to try
     #
-    #
-    # Output: f     - scalar value of objective function at the minimum
-    #         theta - vector of values of parameters at minimum
-    #         iter  - number of iterations it took to reach maximum
-    #         g     - gradient vector at the minimum
-    #         H     - approx Hessian matrix at the minimum
+    # Output:   A list containing the following:
+    #           f     - scalar value of objective function at the minimum
+    #           theta - vector of values of parameters at minimum
+    #           iter  - number of iterations it took to reach maximum
+    #           g     - gradient vector at the minimum
+    #           H     - approx Hessian matrix at the minimum
 
   # Set input theta as our initial theta
   theta0 <- theta
@@ -250,7 +258,7 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     f_theta1 <- f(theta1, ...)
     grad_theta1 <- get_gradient(f, theta1, f_theta1, ...)
 
-    # Initial s and y vectors. Can this just be delta?
+    # Initial s and y vectors
     step_k <- theta1 - theta0
     step_k_t <- t(step_k)
     y_k <- grad_theta1 - grad_theta0
@@ -265,8 +273,8 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
     expression2 <- (diag(length(theta)) - rho_k*(y_k %*% step_k_t))
     expression3 <- rho_k * step_k %*% step_k_t
     
-    # Is there some optimization to be done here by first calculating the rightmost matrix multiplication?
-    B <- expression1 %*% B %*% expression2 + expression3
+    # Speed things up by multiplying matrices from the right
+    B <- expression1 %*% (B %*% expression2) + expression3
     
     if (reduces_obj(f, theta0, delta, ...) == FALSE & has_converged(f_theta0, grad_theta0, fscale, tol) == FALSE)
     # If the objective is not reduced and convergence has not occurred, issue warning
@@ -306,6 +314,8 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
   bfgs_res
 }
 
+## TODO: REMOVE THE CODE BELOW BEFORE SUBMITTING
+
 # Test function Simon provided (Used to check the Quasi method)
 rb <- function(theta,getg=FALSE,k=10) {
   ## Rosenbrock objective function, suitable for use by ’bfgs’
@@ -326,13 +336,13 @@ quad <- function(theta, getg=FALSE, m) {
   (x^2 + 10*x -5) + y^2 + m
 }
 
-bfgs(c(2, 3), m=33, quad, getg=FALSE, maxit = 40)
+bfgs(c(2, 3), m=33, quad, getg=TRUE, maxit = 40)
 
 
-bfgs(c(2, 3), rb, getg=FALSE, maxit = 40)
+bfgs(c(-1, 2), rb, getg=FALSE, maxit = 40)
 
 
-optim(c(-1, 2), rb_1, method = "BFGS", hessian = TRUE)
+optim(c(-1, 2), rb, method = "BFGS", hessian = TRUE)
 
 optim(c(2, 3), quad, method = "BFGS", hessian = TRUE)
 nlm(rb, c(-1, 2), hessian = TRUE)
