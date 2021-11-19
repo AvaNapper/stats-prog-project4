@@ -313,36 +313,3 @@ bfgs <- function(theta, f, ..., tol=1e-5, fscale=1, maxit=100) {
   )
   bfgs_res
 }
-
-## TODO: REMOVE THE CODE BELOW BEFORE SUBMITTING
-
-# Test function Simon provided (Used to check the Quasi method)
-rb <- function(theta,getg=FALSE,k=10) {
-  ## Rosenbrock objective function, suitable for use by ’bfgs’
-  z <- theta[1]; x <- theta[2]
-  f <- k*(z-x^2)^2 + (1-x)^2 + 1
-  if (getg) {
-    attr(f,"gradient") <- c(2*k*(z-x^2),
-                            -4*k*x*(z-x^2) -2*(1-x))
-  }
-  f
-} ##
-
-quad <- function(theta, getg=FALSE, m) {
-  print("this is m")
-  print(m)
-  x <- theta[1]
-  y <- theta[2]
-  (x^2 + 10*x -5) + y^2 + m
-}
-
-bfgs(c(2, 3), m=33, quad, getg=TRUE, maxit = 40)
-
-
-bfgs(c(-1, 2), rb, getg=FALSE, maxit = 40)
-
-
-optim(c(-1, 2), rb, method = "BFGS", hessian = TRUE)
-
-optim(c(2, 3), quad, method = "BFGS", hessian = TRUE)
-nlm(rb, c(-1, 2), hessian = TRUE)
